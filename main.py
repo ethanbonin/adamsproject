@@ -23,10 +23,11 @@ for row in query_job:
     print("latest date entry={}".format(row[0]))
     latest_date = row[0]
 
-
-start_date = latest_date
-end_date = date.today()
 delta = timedelta(days=1)
+start_date = latest_date + delta
+end_date = date.today()
+print(f"Starting {start_date} to End {end_date} ")
+
 date_list_1=[]
 
 while start_date < end_date:
@@ -37,16 +38,27 @@ while start_date < end_date:
 for i in date_list_1:
     try:
         date_list = t.list(date=i)
+        print(f'Date List - {date_list}')
         j = date_list.list_id
         url = 'https://tranco-list.eu/download_daily/'+str(j)
         print(url)
-        df = pd.read_csv(url,compression='zip',header=None)
-        df.columns = ['index', 'rank', 'domain']
+        df = pd.read_csv(url,compression='zip', header=None)
+        df.columns = ['rank', 'domain']
         df['date'] = i
-        df = df[["index", "date", "domain", "rank"]]
-
-        # https://cloud.google.com/bigquery/docs/samples/bigquery-load-table-dataframe
-        # https://medium.com/@larry_nguyen/load-data-into-gcp-bigquery-table-using-pandas-dataframe-7f04260ef518
-        # https://kontext.tech/article/682/pandas-save-dataframe-to-bigquery
-        # TODO: Need to write query to INPUT DATA INTO BIG QUERY
-    except:continue
+        df = df[["date", "domain", "rank"]]
+        print(df)
+        df.to_gbq(
+            'webtraffic-363823.tranco.historical',
+            project_id='webtraffic-363823',
+            if_exists='append',
+            table_schema=[
+                {'name': 'int64_field_0', 'type': 'INTEGER'},
+                {'name': 'date', 'type': 'DATE'},
+                {'name': 'domain', 'type': 'STRING'},
+                {'name': 'rank', 'type': 'INTEGER'},
+            ],
+            progress_bar=True,
+            credentials=None
+        )
+    except Exception as e:
+        print(f"Failed to continue: {e}")
